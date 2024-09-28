@@ -1,8 +1,10 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404 , redirect 
 from .models import Post, Comment
 from django.core.paginator import Paginator, EmptyPage,PageNotAnInteger
 from blog.forms import CommentForm
 from django.contrib import messages
+from django.urls import reverse
+
 # Create your views here.
 
  
@@ -14,8 +16,7 @@ def blog_view(request,**kwargs):
         posts = posts.filter(author__username=kwargs['author_username'])  
     if kwargs.get('tag_name') != None :
         posts = posts.filter(tags__name__in=[kwargs['tag_name']])  
-        
-        
+         
     posts = Paginator(posts,3)
     try :
         page_number = request.GET.get('page')
@@ -37,10 +38,14 @@ def blog_single(request, pid):
             messages.error(request,'your comment didnt submited')
                     
     post = get_object_or_404(Post, pk=pid, status=1)
-    comments = Comment.objects.filter(post=post.id,approved=1).order_by('-created_date')
-    form = CommentForm()
-    context = {'post':post,'comments':comments,'form':form}
-    return render(request, 'blog/blog-single.html', context)
+    if not post.login_require :
+        comments = Comment.objects.filter(post=post.id,approved=1).order_by('-created_date')
+        form = CommentForm()
+        context = {'post':post,'comments':comments,'form':form}
+        return render(request, 'blog/blog-single.html', context)
+    else:
+        return redirect(reverse('accounts:login'))
+    
 
 def test(request):
     return render(request, 'test.html')
